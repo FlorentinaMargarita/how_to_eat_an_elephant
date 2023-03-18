@@ -7,6 +7,7 @@ cycler==0.11.0
 dbus-python==1.2.18
 distro==1.7.0
 distro-info===1.1build1
+Faker==17.6.0
 Flask==2.2.3
 fonttools==4.38.0
 gyp==0.1
@@ -32,6 +33,7 @@ oauthlib==3.2.0
 packaging==23.0
 pandas==1.5.3
 Pillow==9.4.0
+psutil==5.9.4
 pycairo==1.23.0
 PyGObject==3.42.1
 PyJWT==2.3.0

@@ -1,7 +1,8 @@
-from flask import Flask
+from fake_data.generate_data import faking_kiosk_data
 from nats.aio.client import Client as NATS
 import asyncio
-import random
+from flask import Flask, jsonify
+import multiprocessing
 
 
 app = Flask(__name__)
@@ -22,24 +23,30 @@ def init():
     nc
 
 @app.route('/')
-def hello():
-    return 'Hello, World!'
+def healthz():
+    return 'How do you eat an elephant? One bite at a time.'
 
 
-@app.route('/metrics')
-def metrics():
-    # Generate fake metrics
-    cpu_usage = random.uniform(0, 100)
-    mem_usage = random.uniform(0, 100)
-    disk_usage = random.uniform(0, 100)
+@app.route('/publish_metrics')
+def publish_metrics():
+    kiosk_data = faking_kiosk_data()
+    nc.publish("kiosk_data", str(kiosk_data).encode())
 
-    # Publish metrics on NATS
-    nc.publish("fake-metrics.cpu_usage", str(cpu_usage).encode())
-    nc.publish("fake-metrics.mem_usage", str(mem_usage).encode())
-    nc.publish("fake-metrics.disk_usage", str(disk_usage).encode())
+    return "publishing stuff"
 
-    return "OK"
+def emit_data(q):
+    print('below emit_data')
+
+    with app.app_context():
+        while True:
+            data = faking_kiosk_data()
+            q.put(data)
 
 if __name__ == '__main__':
-    # asyncio.run(metrics())
+    q = multiprocessing.Queue()
+    # target means which function should be run by the process
+    p1 = multiprocessing.Process(target=emit_data, args=(q,))
+    p2 = multiprocessing.Process(target=emit_data, args=(q,))
+    p1.start()
+    p2.start()
     app.run()
