@@ -1,0 +1,10 @@
+
+click==8.1.3
+Faker==17.6.0
+Flask==2.2.3
+itsdangerous==2.1.2
+Jinja2==3.1.2
+MarkupSafe==2.1.2
+nats-py==2.2.0
+psutil==5.9.4
+Werkzeug==2.2.3

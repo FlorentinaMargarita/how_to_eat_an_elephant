@@ -1,9 +1,10 @@
-from fake_data.generate_data import faking_kiosk_data
 from nats.aio.client import Client as NATS
 import asyncio
 from flask import Flask, jsonify
 import multiprocessing
 
+from generate_data import faking_kiosk_data
+# from prometheus_flask_exporter import PrometheusMetrics
 
 app = Flask(__name__)
 
