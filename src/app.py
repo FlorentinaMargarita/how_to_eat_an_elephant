@@ -8,7 +8,9 @@ from generate_data import faking_kiosk_data
 
 app = Flask(__name__)
 
-nats_url = "nats://localhost:4222"  
+# to run it locally change the nats_url to nats_url= "nats://localhost:4222"  
+nats_url = "nats://nats:4222"
+
 
 async def connect_nats():
     nc = NATS()

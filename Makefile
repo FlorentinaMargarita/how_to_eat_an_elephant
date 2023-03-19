@@ -22,3 +22,5 @@ prune_images:
 delete_docker_stuff:
 	docker rmi -f $(docker images -a -q)
 	docker stop $(docker ps -aq)
+	docker rm -f $(docker ps -aq)
+
