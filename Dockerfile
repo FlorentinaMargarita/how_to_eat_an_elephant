@@ -10,6 +10,5 @@ RUN python3 -m pip install -r requ.txt
 
 COPY . .
 
-EXPOSE 5000
 
 CMD ["python", "app.py"]

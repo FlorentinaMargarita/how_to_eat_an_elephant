@@ -4,12 +4,53 @@ services:
     image: nats:latest
     ports:
       - "4222:4222"
+
   prometheus-nats-exporter:
     build: .
     image: prometheus-nats-exporter
     ports:
       - "7777:7777"
+
   eating-an-elefant-app:
     build: .
     ports:
       - "5000:5000"
+  
+  timescaledb:
+    image: timescale/timescaledb:2.5.1-pg13
+    environment:
+      POSTGRES_PASSWORD: onebiteatatime
+      POSTGRES_USER: elephant
+      POSTGRES_DB: elephantdatabase
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      
+  thanos:
+    image: thanosio/thanos:v0.22.0
+    command: sidecar
+    ports:
+      - "19091:19091"
+    volumes:
+      - thanos:/data
+    networks:
+      - thanos
+
+    
+  grafana:
+    image: grafana/grafana:6.5.2
+    restart: unless-stopped
+    ports:
+      - 3000:3000
+    networks:
+      - thanos
+
+networks:
+  thanos: {}
+
+  
+
+volumes:
+  thanos: {}
+  timescaledb_data: {}
