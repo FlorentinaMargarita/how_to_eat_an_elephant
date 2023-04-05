@@ -1,0 +1,6 @@
+global:
+  scrape_interval: 15s
+  external_labels:
+    cluster: my-cluster-name
+    environment: production
+    

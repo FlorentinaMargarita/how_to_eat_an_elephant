@@ -1,4 +1,5 @@
 version: "3"
+
 services:
   nats:
     image: nats:latest
@@ -29,15 +30,32 @@ services:
       
   thanos:
     image: thanosio/thanos:v0.22.0
-    command: sidecar
+    command: sidecar --prometheus.url=http://prometheus:9090
     ports:
       - "19091:19091"
     volumes:
       - thanos:/data
     networks:
       - thanos
+    # depends_on:
+    #   - prometheus
 
-    
+  prometheus:
+    image: prom/prometheus:v2.30.0
+    ports:
+      - "9090:9090"
+    networks:
+      - thanos
+    environment:
+      - "GLOBAL__external_labels=cluster=my-cluster-name,environment=production"
+      
+    volumes:
+      - ./prometheus_edit.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+
+
+
   grafana:
     image: grafana/grafana:6.5.2
     restart: unless-stopped

@@ -3,6 +3,9 @@ setup_project: install run_app
 run_app:
 	python3 src/app.py
 
+run_app_in_docker:
+	docker-compose up
+
 install:
 	pip install -r requirements.txt
 
@@ -19,8 +22,17 @@ prometheus_exporter_image:
 prune_images:
 	docker image prune -a
 
-delete_docker_stuff:
-	docker rmi -f $(docker images -a -q)
-	docker stop $(docker ps -aq)
-	docker rm -f $(docker ps -aq)
+# delete_docker_stuff:
+# 	docker stop $(docker ps -aq)
+# 	docker rm -f $(docker ps -aq)
+# 	docker rmi -f $(docker images -a -q)
+
+prune_docker:
+	docker system prune
+
+interact_with_database:
+	docker exec -it aba181ac8945 psql -U elephant elephantdatabase
+
+port_500_check:
+	sudo lsof -i :5000
 

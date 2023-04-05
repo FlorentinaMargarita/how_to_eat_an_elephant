@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY requ.txt .
 COPY src .
-
+COPY prometheus_edit.yml .
 
 RUN python3 -m pip install -r requ.txt
 
