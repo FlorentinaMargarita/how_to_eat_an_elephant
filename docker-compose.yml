@@ -37,8 +37,6 @@ services:
       - thanos:/data
     networks:
       - thanos
-    # depends_on:
-    #   - prometheus
 
   prometheus:
     image: prom/prometheus:v2.30.0
@@ -63,6 +61,18 @@ services:
       - 3000:3000
     networks:
       - thanos
+    volumes:
+      - ./datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./grafana/dashboard.yaml:/etc/grafana/provisioning/dashboards/main.yaml
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+
+    environment:
+      # - GF_PATHS_CONFIG=/etc/grafana/grafana.ini
+      - GF_PATHS_DATA=/var/lib/grafana
+
+    command:
+      - "-config=/etc/grafana/grafana.ini"
+
 
 networks:
   thanos: {}
@@ -72,3 +82,4 @@ networks:
 volumes:
   thanos: {}
   timescaledb_data: {}
+  grafana_data: {}
