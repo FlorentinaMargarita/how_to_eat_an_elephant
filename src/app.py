@@ -34,7 +34,7 @@ def create_app():
     cpu_usage_gauge = [Gauge(f'kiosk_cpu_usage_{i}', f'CPU usage of the kiosk at index {i}', ['id'], registry=registry) for i in range(n)]
     memory_usage_gauge = [Gauge(f'kiosk_memory_usage_{i}', f'Memory usage of the kiosk at index {i}', ['id'], registry=registry) for i in range(n)]
     memory_percent_gauge = Gauge('kiosk_memory_percent', 'Memory percentage usage of the kiosk', ['memory_percent'], registry=registry)
-
+    id_gauge = Gauge('id', 'Metric id of the kiosk', ['id'], registry=registry) 
 
     async def run():
         nc = NATS()
@@ -85,7 +85,7 @@ def create_app():
                 for i, memory_usage in enumerate(data_dict['memory_usage']):
                     memory_usage_gauge[i].labels(id=data_dict['id']).set(memory_usage)
                 memory_percent_gauge.labels(memory_percent=data_dict['memory_percent']).set(data_dict['memory_percent'])
-                        
+                id_gauge.labels(id=data_dict['id']).set(1)
            
         await nc.subscribe("kiosk_data", cb=message_handler)
 
