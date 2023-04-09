@@ -5,29 +5,54 @@ services:
     image: nats:latest
     ports:
       - "4222:4222"
+    networks:
+      - thanos
 
-  prometheus-nats-exporter:
-    build: .
-    image: prometheus-nats-exporter
+  # prometheus-nats-exporter:
+  #   build: .
+  #   image: prometheus-nats-exporter
+  #   ports:
+  #     - "7777:7777"
+
+  pushgateway:
+    image: prom/pushgateway
     ports:
-      - "7777:7777"
+      - "9091:9091"
+    restart: always
+    networks:
+      - thanos
+
 
   eating-an-elefant-app:
     build: .
+    environment:
+      NATS_URL: "nats://nats:4222"
+      SQLALCHEMY_DATABASE_URI: "postgresql+psycopg2://elephant:onebiteatatime@timescaledb:5432/elephantdatabase"
+      POSTGRES_HOST: "timescaledb"
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: "elephant"
+      POSTGRES_PASSWORD: "onebiteatatime"
+      POSTGRES_DB: "elephantdatabase"
     ports:
       - "5000:5000"
+    networks:
+      - thanos
   
   timescaledb:
-    image: timescale/timescaledb:2.5.1-pg13
+    image: timescale/timescaledb:latest-pg13
     environment:
       POSTGRES_PASSWORD: onebiteatatime
       POSTGRES_USER: elephant
       POSTGRES_DB: elephantdatabase
+      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5432:5432"
     volumes:
       - timescaledb_data:/var/lib/postgresql/data
-      
+    networks:
+    - thanos
+
+
   thanos:
     image: thanosio/thanos:v0.22.0
     command: sidecar --prometheus.url=http://prometheus:9090
@@ -55,7 +80,7 @@ services:
 
 
   grafana:
-    image: grafana/grafana:6.5.2
+    image: grafana/grafana:8.2.6
     restart: unless-stopped
     ports:
       - 3000:3000
@@ -67,8 +92,12 @@ services:
       - ./grafana/dashboards:/var/lib/grafana/dashboards
 
     environment:
-      # - GF_PATHS_CONFIG=/etc/grafana/grafana.ini
       - GF_PATHS_DATA=/var/lib/grafana
+      - GF_AUTH_BASIC_ENABLED=false
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - SQLALCHEMY_DATABASE_URI="postgresql+psycopg2://elephant:onebiteatatime@timescaledb:5432/elephantdatabase"
+
 
     command:
       - "-config=/etc/grafana/grafana.ini"

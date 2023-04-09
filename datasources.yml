@@ -12,8 +12,14 @@ datasources:
   access: proxy
 - name: TimescaleDB
   type: postgres
-  host: timescaledb
+  access: proxy
+  url: timescaledb:5432
   database: elephantdatabase
   user: elephant
-  password: onebiteatatime
-  sslmode: disable
+  secureJsonData:
+    password: onebiteatatime
+  jsonData:
+    sslmode: "disable"
+    timescaledb: true
+    postgresVersion: 1300
+

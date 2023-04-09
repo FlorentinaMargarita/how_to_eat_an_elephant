@@ -1,6 +1,9 @@
 global:
-  scrape_interval: 15s
+  scrape_interval: 10s
   external_labels:
-    cluster: my-cluster-name
-    environment: production
-    
+    cluster: elephant-cluster
+    environment: development
+scrape_configs:
+  - job_name: "nats_kiosk_data"
+    static_configs:
+      - targets: ["pushgateway:9091"]
