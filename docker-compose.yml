@@ -8,11 +8,6 @@ services:
     networks:
       - thanos
 
-  # prometheus-nats-exporter:
-  #   build: .
-  #   image: prometheus-nats-exporter
-  #   ports:
-  #     - "7777:7777"
 
   pushgateway:
     image: prom/pushgateway
@@ -55,7 +50,12 @@ services:
 
   thanos:
     image: thanosio/thanos:v0.22.0
-    command: sidecar --prometheus.url=http://prometheus:9090
+    # command: sidecar --prometheus.url=http://prometheus:9090
+    command:
+      - sidecar
+      - --prometheus.url=http://prometheus:9090
+      - --grpc-address=0.0.0.0:19091
+      - --http-address=0.0.0.0:19092
     ports:
       - "19091:19091"
     volumes:
@@ -77,6 +77,20 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
 
+
+  thanos-query:
+    image: thanosio/thanos:v0.22.0
+    command:
+      - query
+      - --grpc-address=0.0.0.0:19191
+      - --http-address=0.0.0.0:19192
+      - --query.replica-label=prometheus_replica
+      - --store=thanos:19091
+    ports:
+      - "19191:19191"
+      - "19192:19192"
+    networks:
+      - thanos
 
 
   grafana:

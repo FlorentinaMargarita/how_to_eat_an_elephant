@@ -5,6 +5,8 @@ Go to localhost...
 
 * If you open grafana on `http://localhost:3000/` both username and password are `admin`.
 
+Thanos-Quierer UI: http://localhost:19192/
+
 # How to run the application locally
 
 Open 2 terminals: 
