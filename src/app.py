@@ -1,27 +1,22 @@
 from nats.aio.client import Client as NATS
 import asyncio
-from flask import Flask, Response
+from flask import Flask
 from generate_data import faking_kiosk_data
 import json
 from sqlalchemy import text
-from sqlalchemy.orm import Session
 import json
-from flask_sqlalchemy import SQLAlchemy
 from models import Metrics, db
-from prometheus_client import Histogram, generate_latest, push_to_gateway, Counter, Gauge
+from prometheus_client import push_to_gateway, Gauge
 from prometheus_client.core import CollectorRegistry
-from prometheus_flask_exporter import PrometheusMetrics
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
-# prometheus_histogram = Histogram("nats_message_latency_seconds", "Latency of NATS message processing")
 
 nats_url = "nats://nats:4222"
 # nats_url = os.environ.get('NATS_URL')
 
 
 registry = CollectorRegistry()
-prometheus_counter = Counter("nats_message_count", "Total number of NATS messages received", registry=registry)
-
 
 def create_app():
     app = Flask(__name__)
@@ -35,32 +30,15 @@ def create_app():
 
     print('finit!')
     registry = CollectorRegistry()
-    n=10
+    n=1000
     cpu_usage_gauge = [Gauge(f'kiosk_cpu_usage_{i}', f'CPU usage of the kiosk at index {i}', ['id'], registry=registry) for i in range(n)]
     memory_usage_gauge = [Gauge(f'kiosk_memory_usage_{i}', f'Memory usage of the kiosk at index {i}', ['id'], registry=registry) for i in range(n)]
-    # cpu_usage_gauge = Gauge('kiosk_cpu_usage', 'CPU usage of the kiosk', ['cpu_usage'], registry=registry)
-    # memory_usage_gauge = Gauge('kiosk_memory_usage', 'Memory usage of the kiosk', ['memory_usage'], registry=registry)
     memory_percent_gauge = Gauge('kiosk_memory_percent', 'Memory percentage usage of the kiosk', ['memory_percent'], registry=registry)
-    print(memory_percent_gauge, 'memory_percent_gauge up top')
 
-    @app.route('/metrics', methods=['GET'])
-    def metrics():
-        return Response(generate_latest(registry), content_type='text/plain')
-    
-    @app.route('/health', methods=['GET'])
-    def health():
-        return 'I am healthy'
 
     async def run():
         nc = NATS()
         await nc.connect(nats_url)
-
-        async def publish_metrics():
-            kiosk_data = faking_kiosk_data()
-            await nc.publish("kiosk_data", str(kiosk_data).encode())
-
-            return "publishing stuff"
-        
         
         async def message_handler(msg):
             subject = msg.subject
@@ -90,13 +68,10 @@ def create_app():
                 if result:
                     print(f"Hypertable {'metrics'} already exists.")
                 else:
-                    print("IN THE ELSE")
                     stmt = text('SELECT create_hypertable(:table_name, :partition_column, migrate_data => true)')
                     db.session.execute(stmt, {'table_name': 'metrics', 'partition_column': 'timestamp'})
                     db.session.commit()  
                 print(f"Received message on subject '{subject}': {data}")
-
-                print('on top of prometheus nats stuff')
                 handle_prometheus_stuff(data_dict)
             
         
@@ -114,20 +89,20 @@ def create_app():
            
         await nc.subscribe("kiosk_data", cb=message_handler)
 
-        print(prometheus_counter, 'prometheus_counter')
-        print(registry, 'registry')
 
         async def publish_metrics():
-            kiosk_data = faking_kiosk_data()
+            # method runs concurrently on two cores of the machine 
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                kiosk_data = await loop.run_in_executor(executor, faking_kiosk_data)
+            # kiosk_data = faking_kiosk_data()
             await nc.publish("kiosk_data", str(kiosk_data).encode())
             push_to_gateway("http://pushgateway:9091", job='kiosk_data', registry=registry)
-            # return Response(generate_latest(registry), content_type='text/plain')
 
         
         async def publish_metrics_periodically():
             while True:
                 await publish_metrics()
-                await asyncio.sleep(1)  # 1 second interval
+                await asyncio.sleep(1)
         
 
         asyncio.create_task(publish_metrics_periodically())
