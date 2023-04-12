@@ -8,8 +8,14 @@ datasources:
   isDefault: true
 - name: Thanos
   type: prometheus
-  url: http://thanos:19091
+  url: http://thanosQuery:19192
   access: proxy
+  jsonData:
+    queryTimeout: "30s"
+    httpMethod: GET
+    timeRange: null
+    sslmode: "disable"
+
 - name: TimescaleDB
   type: postgres
   access: proxy

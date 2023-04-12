@@ -62,6 +62,21 @@ services:
       - thanos:/data
     networks:
       - thanos
+  
+  thanosQuery:
+    image: thanosio/thanos:v0.22.0
+    command:
+      - query
+      - --grpc-address=0.0.0.0:19191
+      - --http-address=0.0.0.0:19192
+      - --query.replica-label=prometheus_replica
+      - --store=thanos:19091
+      - --log.level=debug
+    ports:
+      - "19191:19191"
+      - "19192:19192"
+    networks:
+      - thanos
 
   prometheus:
     image: prom/prometheus:v2.30.0
@@ -78,19 +93,7 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
 
 
-  thanos-query:
-    image: thanosio/thanos:v0.22.0
-    command:
-      - query
-      - --grpc-address=0.0.0.0:19191
-      - --http-address=0.0.0.0:19192
-      - --query.replica-label=prometheus_replica
-      - --store=thanos:19091
-    ports:
-      - "19191:19191"
-      - "19192:19192"
-    networks:
-      - thanos
+
 
 
   grafana:

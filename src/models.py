@@ -1,4 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
 
 db = SQLAlchemy()
 
@@ -9,7 +10,7 @@ class Metrics(db.Model):
     cpu_usage = db.Column(db.ARRAY(db.Integer))
     memory_usage = db.Column(db.ARRAY(db.Integer))
     memory_percent = db.Column(db.Numeric(5,2))
-    timestamp = db.Column(db.TIMESTAMP, nullable=False,  primary_key=True)
+    timestamp = db.Column(db.TIMESTAMP(timezone=True), nullable=False,  primary_key=True, default=datetime.utcnow)
 
     def __init__(self, id, cpu_usage, memory_usage, memory_percent, timestamp):
         self.id = id
