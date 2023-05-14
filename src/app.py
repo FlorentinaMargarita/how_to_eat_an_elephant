@@ -16,7 +16,7 @@ nats_url = "nats://nats:4222"
 # nats_url = os.environ.get('NATS_URL')
 
 
-registry = CollectorRegistry()
+# registry = CollectorRegistry()
 
 def create_app():
     app = Flask(__name__)
@@ -30,9 +30,9 @@ def create_app():
 
     print('finit!')
     registry = CollectorRegistry()
-    n=1000
-    cpu_usage_gauge = [Gauge(f'kiosk_cpu_usage_{i}', f'CPU usage of the kiosk at index {i}', ['id'], registry=registry) for i in range(n)]
-    memory_usage_gauge = [Gauge(f'kiosk_memory_usage_{i}', f'Memory usage of the kiosk at index {i}', ['id'], registry=registry) for i in range(n)]
+    # n=1000
+    cpu_usage_gauge = Gauge(f'kiosk_cpu_usage', 'CPU usage of the kiosk at index', ['kiosk_cpu_usage'], registry=registry)
+    memory_usage_gauge = Gauge(f'kiosk_memory_usage', f'Memory usage of the kiosk at index', ['kiosk_memory_usage'], registry=registry)
     memory_percent_gauge = Gauge('kiosk_memory_percent', 'Memory percentage usage of the kiosk', ['memory_percent'], registry=registry)
     id_gauge = Gauge('id', 'Metric id of the kiosk', ['id'], registry=registry) 
 
@@ -79,14 +79,17 @@ def create_app():
             print('inside of handle_prometheus_stuff')
 
             with app.app_context():
-                for i, cpu_usage in enumerate(data_dict['cpu_usage']):
-                    cpu_usage_gauge[i].labels(id=data_dict['id']).set(cpu_usage)
+                cpu_usage_gauge.labels(kiosk_cpu_usage=data_dict['cpu_usage']).set(data_dict['cpu_usage'][0])
+                memory_usage_gauge.labels(kiosk_memory_usage=data_dict['memory_usage']).set(data_dict['memory_usage'][0])
+                # for i, cpu_usage in enumerate(data_dict['cpu_usage']):
+                #     cpu_usage_gauge[i].labels(id=data_dict['id']).set(cpu_usage)
     
-                for i, memory_usage in enumerate(data_dict['memory_usage']):
-                    memory_usage_gauge[i].labels(id=data_dict['id']).set(memory_usage)
+                # for i, memory_usage in enumerate(data_dict['memory_usage']):
+                #     memory_usage_gauge[i].labels(id=data_dict['id']).set(memory_usage)
                 memory_percent_gauge.labels(memory_percent=data_dict['memory_percent']).set(data_dict['memory_percent'])
-                id_gauge.labels(id=data_dict['id']).set(1)
-           
+                id_gauge.labels(id=data_dict['id']).set(1)    
+        
+        # push_to_gateway("http://pushgateway:9091", job='kiosk_data', registry=registry)
         await nc.subscribe("kiosk_data", cb=message_handler)
 
 

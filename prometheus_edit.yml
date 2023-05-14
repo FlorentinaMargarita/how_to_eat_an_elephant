@@ -3,6 +3,7 @@ global:
   external_labels:
     cluster: elephant-cluster
     environment: development
+
 scrape_configs:
   - job_name: "nats_kiosk_data"
     static_configs:
