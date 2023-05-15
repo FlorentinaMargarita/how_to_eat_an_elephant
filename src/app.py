@@ -43,14 +43,24 @@ def create_app():
         async def message_handler(msg):
             subject = msg.subject
             data = msg.data.decode()
-            print(data, 'data in se aweseome message safer')
+            print('DO YOU EVEN GET HERE?')
+            kiosk_number = 0
+            if msg.subject == "kiosk_data_1": 
+                kiosk_number = 1
+            else:
+                kiosk_number = 2
+
+            print(msg.subject, 'msg.subject in se aweseome message safer')
+            print(kiosk_number, 'kiosk_number')
+            print(data, 'data')
+
 
             with app.app_context():
                 db.session.commit()
                 data_dict = json.loads(data.replace("'", "\""))
                 metric = Metrics(
                 id=data_dict['id'],
-                     
+                kiosk_nr= kiosk_number,
                 cpu_usage=data_dict['cpu_usage'],
                 memory_usage=data_dict['memory_usage'],
                 memory_percent=data_dict['memory_percent'],
@@ -72,33 +82,35 @@ def create_app():
                     db.session.execute(stmt, {'table_name': 'metrics', 'partition_column': 'timestamp'})
                     db.session.commit()  
                 print(f"Received message on subject '{subject}': {data}")
-                handle_prometheus_stuff(data_dict)
+                handle_prometheus_stuff(data_dict, kiosk_number)
             
         
-        def  handle_prometheus_stuff(data_dict):
+        def handle_prometheus_stuff(data_dict, kiosk_number):
             print('inside of handle_prometheus_stuff')
 
             with app.app_context():
                 cpu_usage_gauge.labels(kiosk_cpu_usage=data_dict['cpu_usage']).set(data_dict['cpu_usage'][0])
                 memory_usage_gauge.labels(kiosk_memory_usage=data_dict['memory_usage']).set(data_dict['memory_usage'][0])
-                # for i, cpu_usage in enumerate(data_dict['cpu_usage']):
-                #     cpu_usage_gauge[i].labels(id=data_dict['id']).set(cpu_usage)
-    
-                # for i, memory_usage in enumerate(data_dict['memory_usage']):
-                #     memory_usage_gauge[i].labels(id=data_dict['id']).set(memory_usage)
                 memory_percent_gauge.labels(memory_percent=data_dict['memory_percent']).set(data_dict['memory_percent'])
-                id_gauge.labels(id=data_dict['id']).set(1)    
+                id_gauge.labels(id=data_dict['id']).set(kiosk_number)    
         
+        await nc.subscribe("kiosk_data_1", cb=message_handler)
+        await nc.subscribe("kiosk_data_2", cb=message_handler)
         # push_to_gateway("http://pushgateway:9091", job='kiosk_data', registry=registry)
-        await nc.subscribe("kiosk_data", cb=message_handler)
+
 
 
         async def publish_metrics():
             # method runs concurrently on two cores of the machine 
+            # loop = asyncio.get_running_loop()
             with ThreadPoolExecutor(max_workers=2) as executor:
-                kiosk_data = await loop.run_in_executor(executor, faking_kiosk_data)
-            # kiosk_data = faking_kiosk_data()
-            await nc.publish("kiosk_data", str(kiosk_data).encode())
+                # kiosk_data = await loop.run_in_executor(executor, faking_kiosk_data)
+                kiosk_data_1 = loop.run_in_executor(executor, faking_kiosk_data)
+                kiosk_data_2 = loop.run_in_executor(executor, faking_kiosk_data)
+                results = await asyncio.gather(kiosk_data_1, kiosk_data_2)
+            # await nc.publish("kiosk_data", str(kiosk_data).encode())
+            await nc.publish("kiosk_data_1", str(results[0]).encode())
+            await nc.publish("kiosk_data_2", str(results[1]).encode())
             push_to_gateway("http://pushgateway:9091", job='kiosk_data', registry=registry)
 
         
