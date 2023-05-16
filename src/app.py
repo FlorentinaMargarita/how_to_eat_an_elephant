@@ -16,8 +16,6 @@ nats_url = "nats://nats:4222"
 # nats_url = os.environ.get('NATS_URL')
 
 
-# registry = CollectorRegistry()
-
 def create_app():
     app = Flask(__name__)
     app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://elephant:onebiteatatime@timescaledb:5432/elephantdatabase'
@@ -30,11 +28,9 @@ def create_app():
 
     print('finit!')
     registry = CollectorRegistry()
-    # n=1000
-    cpu_usage_gauge = Gauge(f'kiosk_cpu_usage', 'CPU usage of the kiosk at index', ['kiosk_cpu_usage'], registry=registry)
-    memory_usage_gauge = Gauge(f'kiosk_memory_usage', f'Memory usage of the kiosk at index', ['kiosk_memory_usage'], registry=registry)
-    memory_percent_gauge = Gauge('kiosk_memory_percent', 'Memory percentage usage of the kiosk', ['memory_percent'], registry=registry)
-    id_gauge = Gauge('id', 'Metric id of the kiosk', ['id'], registry=registry) 
+    cpu_usage_gauge = Gauge(f'kiosk_cpu_usage', 'CPU usage of the kiosk at index', ['kiosk_number', 'id'], registry=registry)
+    memory_usage_gauge = Gauge(f'kiosk_memory_usage', f'Memory usage of the kiosk at index', ['kiosk_number', 'id'], registry=registry)
+    memory_percent_gauge = Gauge('kiosk_memory_percent', 'Memory percentage usage of the kiosk', [ 'kiosk_number', 'id'], registry=registry)
 
     async def run():
         nc = NATS()
@@ -81,22 +77,28 @@ def create_app():
                     stmt = text('SELECT create_hypertable(:table_name, :partition_column, migrate_data => true)')
                     db.session.execute(stmt, {'table_name': 'metrics', 'partition_column': 'timestamp'})
                     db.session.commit()  
-                print(f"Received message on subject '{subject}': {data}")
+                print(f"Received message on subject '{subject}'")
                 handle_prometheus_stuff(data_dict, kiosk_number)
             
         
         def handle_prometheus_stuff(data_dict, kiosk_number):
             print('inside of handle_prometheus_stuff')
-
+            kiosk_number = f'kiosk_number_{kiosk_number}'
+            print(data_dict['cpu_usage'][0], 'data_dict[cpu_usage][0]')
             with app.app_context():
-                cpu_usage_gauge.labels(kiosk_cpu_usage=data_dict['cpu_usage']).set(data_dict['cpu_usage'][0])
-                memory_usage_gauge.labels(kiosk_memory_usage=data_dict['memory_usage']).set(data_dict['memory_usage'][0])
-                memory_percent_gauge.labels(memory_percent=data_dict['memory_percent']).set(data_dict['memory_percent'])
-                id_gauge.labels(id=data_dict['id']).set(kiosk_number)    
+                for i in range(len(data_dict['cpu_usage'])):
+                    id= f'{data_dict["id"]} metric nr {i}'
+                    cpu_usage_gauge.labels( kiosk_number=kiosk_number, id=id).set(data_dict['cpu_usage'][i])
+
+                for i in range(len(data_dict['memory_usage'])):
+                    id= f'{data_dict["id"]} metric nr {i}'
+                    memory_usage_gauge.labels( kiosk_number=kiosk_number, id=id).set(data_dict['cpu_usage'][i])
+                
+
+                memory_percent_gauge.labels( kiosk_number=kiosk_number, id=data_dict['id']).set(data_dict['memory_percent'])
         
         await nc.subscribe("kiosk_data_1", cb=message_handler)
         await nc.subscribe("kiosk_data_2", cb=message_handler)
-        # push_to_gateway("http://pushgateway:9091", job='kiosk_data', registry=registry)
 
 
 
@@ -104,11 +106,9 @@ def create_app():
             # method runs concurrently on two cores of the machine 
             # loop = asyncio.get_running_loop()
             with ThreadPoolExecutor(max_workers=2) as executor:
-                # kiosk_data = await loop.run_in_executor(executor, faking_kiosk_data)
                 kiosk_data_1 = loop.run_in_executor(executor, faking_kiosk_data)
                 kiosk_data_2 = loop.run_in_executor(executor, faking_kiosk_data)
                 results = await asyncio.gather(kiosk_data_1, kiosk_data_2)
-            # await nc.publish("kiosk_data", str(kiosk_data).encode())
             await nc.publish("kiosk_data_1", str(results[0]).encode())
             await nc.publish("kiosk_data_2", str(results[1]).encode())
             push_to_gateway("http://pushgateway:9091", job='kiosk_data', registry=registry)
