@@ -39,7 +39,6 @@ def create_app():
         async def message_handler(msg):
             subject = msg.subject
             data = msg.data.decode()
-            print('DO YOU EVEN GET HERE?')
             kiosk_number = 0
             if msg.subject == "kiosk_data_1": 
                 kiosk_number = 1
@@ -48,7 +47,6 @@ def create_app():
 
             print(msg.subject, 'msg.subject in se aweseome message safer')
             print(kiosk_number, 'kiosk_number')
-            print(data, 'data')
 
 
             with app.app_context():
@@ -62,6 +60,7 @@ def create_app():
                 memory_percent=data_dict['memory_percent'],
                 timestamp=data_dict['timestamp']
             )
+
                 db.session.add(metric)
                 db.session.commit()
 
@@ -92,7 +91,7 @@ def create_app():
 
                 for i in range(len(data_dict['memory_usage'])):
                     id= f'{data_dict["id"]} metric nr {i}'
-                    memory_usage_gauge.labels( kiosk_number=kiosk_number, id=id).set(data_dict['cpu_usage'][i])
+                    memory_usage_gauge.labels( kiosk_number=kiosk_number, id=id).set(data_dict['memory_usage'][i])
                 
 
                 memory_percent_gauge.labels( kiosk_number=kiosk_number, id=data_dict['id']).set(data_dict['memory_percent'])
@@ -103,8 +102,6 @@ def create_app():
 
 
         async def publish_metrics():
-            # method runs concurrently on two cores of the machine 
-            # loop = asyncio.get_running_loop()
             with ThreadPoolExecutor(max_workers=2) as executor:
                 kiosk_data_1 = loop.run_in_executor(executor, faking_kiosk_data)
                 kiosk_data_2 = loop.run_in_executor(executor, faking_kiosk_data)
@@ -117,7 +114,8 @@ def create_app():
         async def publish_metrics_periodically():
             while True:
                 await publish_metrics()
-                await asyncio.sleep(1)
+                # Data gets published via NATS once every 10 seconds. 
+                await asyncio.sleep(10)
         
 
         asyncio.create_task(publish_metrics_periodically())
