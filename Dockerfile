@@ -7,8 +7,9 @@ RUN pip install prometheus_client
 RUN pip install prometheus-flask-exporter 
 
 COPY requ.txt .
-COPY src .
 COPY wait-for.sh .
+RUN chmod +x ./wait-for.sh
+COPY src .
 RUN python3 -m pip install -r requ.txt
 
 COPY . .
